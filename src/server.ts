@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import type { Server } from 'http';
 import { createServer } from 'vite';
 import { WebSocket } from 'ws';
 import crypto from 'crypto';
@@ -80,9 +81,19 @@ let chatResponseText = '';
 let lastDetail: string | null = null;
 let lastAlertTs: string | null = null;
 let lastAlertChannel: string | null = null;
+let isShuttingDown = false;
+let gwConnected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_DELAY_MS = 3000;
 
 function connectGateway(): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (isShuttingDown) {
+      reject(new Error('Server is shutting down'));
+      return;
+    }
+
     gwWs = new WebSocket(GW_URL, { headers: { origin: `http://localhost:${PORT}` } });
 
     gwWs.on('open', () => {
@@ -150,6 +161,8 @@ function connectGateway(): Promise<void> {
       if (data.type === 'res' && !connected) {
         if (data.ok) {
           connected = true;
+          gwConnected = true;
+          reconnectAttempts = 0;
           console.log('Gateway connected!', data.payload?.auth ? '(got device token)' : '');
           resolve();
         } else {
@@ -203,11 +216,29 @@ function connectGateway(): Promise<void> {
 
     gwWs.on('error', (err) => {
       console.error('GW WS error:', err.message);
+      gwConnected = false;
       reject(err);
     });
 
     gwWs.on('close', (code, reason) => {
       console.log('GW WS closed:', code, reason.toString());
+      gwConnected = false;
+
+      // Attempt reconnection if not shutting down
+      if (!isShuttingDown && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        console.log(`Reconnecting to gateway (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        setTimeout(() => {
+          connectGateway()
+            .then(() => {
+              reconnectAttempts = 0;
+              console.log('Reconnected to gateway');
+            })
+            .catch((err) => {
+              console.error('Reconnection failed:', err.message);
+            });
+        }, RECONNECT_DELAY_MS);
+      }
     });
   });
 }
@@ -250,6 +281,26 @@ async function main(): Promise<void> {
 
   const app = express();
   app.use(express.json());
+
+  // Health check endpoint
+  app.get('/health', (_req: Request, res: Response) => {
+    const status = {
+      status: gwConnected ? 'healthy' : 'degraded',
+      gateway: gwConnected ? 'connected' : 'disconnected',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    };
+    res.status(gwConnected ? 200 : 503).json(status);
+  });
+
+  // Readiness check (for k8s)
+  app.get('/ready', (_req: Request, res: Response) => {
+    if (gwConnected && !isShuttingDown) {
+      res.status(200).json({ ready: true });
+    } else {
+      res.status(503).json({ ready: false, reason: isShuttingDown ? 'shutting_down' : 'gateway_disconnected' });
+    }
+  });
 
   // Client config endpoint - safe to expose (no secrets except simli key)
   app.get('/api/client-config', (_req: Request, res: Response) => {
@@ -573,9 +624,54 @@ User message: ${message}`;
   });
   app.use(vite.middlewares);
 
-  app.listen(PORT, () => {
+  const server: Server = app.listen(PORT, () => {
     console.log(`${config.app.name} running at http://localhost:${PORT}`);
   });
+
+  // Graceful shutdown handling
+  const shutdown = async (signal: string): Promise<void> => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    console.log(`\n${signal} received, shutting down gracefully...`);
+
+    // Close WebSocket connection
+    if (gwWs) {
+      try {
+        gwWs.close();
+      } catch {
+        // Ignore errors during shutdown
+      }
+    }
+
+    // Close Vite server
+    try {
+      await vite.close();
+    } catch {
+      // Ignore errors during shutdown
+    }
+
+    // Close HTTP server with timeout
+    const forceShutdownTimeout = setTimeout(() => {
+      console.log('Forcing shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+
+    server.close((err) => {
+      clearTimeout(forceShutdownTimeout);
+      if (err) {
+        console.error('Error during shutdown:', err);
+        process.exit(1);
+      }
+      console.log('Server closed');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
