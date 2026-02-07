@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Interactive AI avatar frontend for OpenClaw",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "bin": {
     "openclaw-avatar": "dist/cli.js"
   },
@@ -13,7 +13,8 @@
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "dev:client": "vite",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "openclaw",
@@ -24,8 +25,16 @@
     "tts",
     "voice"
   ],
-  "author": "",
+  "author": "Johannes Berggren",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Johannes-Berggren/openclaw-avatar.git"
+  },
+  "homepage": "https://github.com/Johannes-Berggren/openclaw-avatar#readme",
+  "bugs": {
+    "url": "https://github.com/Johannes-Berggren/openclaw-avatar/issues"
+  },
   "dependencies": {
     "dotenv": "^16.4.0",
     "express": "^5.2.1",

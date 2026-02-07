@@ -1,11 +1,16 @@
 import express, { Request, Response } from 'express';
 import type { Server } from 'http';
-import { createServer } from 'vite';
 import { WebSocket } from 'ws';
 import crypto from 'crypto';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { loadConfig, getClientConfig, Config, ClientConfig } from './config/index.js';
 import { initStreamDeck, BUTTON_PROMPTS, setHasDetail, setLoading, setSpeaking } from './streamdeck.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const isDev = process.env.NODE_ENV !== 'production' && process.argv[1]?.includes('tsx');
 
 // Load configuration
 const config: Config = loadConfig();
@@ -617,12 +622,33 @@ User message: ${message}`;
     console.log('Stream Deck disabled in config');
   }
 
-  // Vite dev server AFTER api routes
-  const vite = await createServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
-  app.use(vite.middlewares);
+  // Serve client files
+  let vite: { close: () => Promise<void> } | null = null;
+
+  if (isDev) {
+    // Development: use Vite dev server with HMR
+    const { createServer } = await import('vite');
+    const viteServer = await createServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(viteServer.middlewares);
+    vite = viteServer;
+    console.log('Running in development mode with Vite HMR');
+  } else {
+    // Production: serve static files from dist/client
+    const clientDir = join(__dirname, 'client');
+    if (existsSync(clientDir)) {
+      app.use(express.static(clientDir));
+      // SPA fallback - serve index.html for all non-API routes
+      app.get('*', (_req, res) => {
+        res.sendFile(join(clientDir, 'index.html'));
+      });
+      console.log('Running in production mode, serving static files');
+    } else {
+      console.warn('Warning: dist/client not found. Run "npm run build" first.');
+    }
+  }
 
   const server: Server = app.listen(PORT, () => {
     console.log(`${config.app.name} running at http://localhost:${PORT}`);
@@ -643,11 +669,13 @@ User message: ${message}`;
       }
     }
 
-    // Close Vite server
-    try {
-      await vite.close();
-    } catch {
-      // Ignore errors during shutdown
+    // Close Vite server if running
+    if (vite) {
+      try {
+        await vite.close();
+      } catch {
+        // Ignore errors during shutdown
+      }
     }
 
     // Close HTTP server with timeout
