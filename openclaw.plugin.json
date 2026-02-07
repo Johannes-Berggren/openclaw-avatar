@@ -1,0 +1,46 @@
+{
+  "id": "avatar",
+  "name": "Avatar Skill",
+  "description": "Interactive AI avatar with Simli video and ElevenLabs TTS",
+  "version": "1.0.0",
+  "kind": "frontend",
+  "author": "",
+  "repository": "",
+  "license": "MIT",
+  "keywords": ["avatar", "simli", "elevenlabs", "tts", "voice", "assistant"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "simliApiKey": {
+        "type": "string",
+        "description": "Simli API key for avatar rendering",
+        "secret": true
+      },
+      "elevenLabsApiKey": {
+        "type": "string",
+        "description": "ElevenLabs API key for text-to-speech",
+        "secret": true
+      },
+      "slackBotToken": {
+        "type": "string",
+        "description": "Slack bot token for messaging integration (optional)",
+        "secret": true
+      },
+      "openclawToken": {
+        "type": "string",
+        "description": "OpenClaw gateway authentication token (optional)",
+        "secret": true
+      }
+    },
+    "required": ["simliApiKey", "elevenLabsApiKey"]
+  },
+  "endpoints": {
+    "web": {
+      "port": 5173,
+      "path": "/"
+    }
+  },
+  "dependencies": {
+    "openclaw": ">=1.0.0"
+  }
+}
