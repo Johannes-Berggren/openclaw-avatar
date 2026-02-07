@@ -56,8 +56,7 @@
   "files": [
     "dist",
     "public",
-    "skills",
-    "openclaw.plugin.json",
+    "SKILL.md",
     "avatar.config.example.json",
     ".env.example"
   ],
