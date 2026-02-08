@@ -8,6 +8,7 @@
     "openclaw-avatar": "dist/cli.js"
   },
   "scripts": {
+    "setup": "bash scripts/setup.sh",
     "build": "tsc && vite build",
     "build:server": "tsc",
     "start": "node dist/server.js",
@@ -56,6 +57,7 @@
   "files": [
     "dist",
     "public",
+    "scripts",
     "SKILL.md",
     "avatar.config.example.json",
     ".env.example"

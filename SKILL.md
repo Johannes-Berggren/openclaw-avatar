@@ -1,10 +1,10 @@
 ---
 name: avatar
-description: Interactive AI avatar with Simli video rendering and ElevenLabs TTS
-emoji: "\U0001F9D1\u200D\U0001F4BB"
+description: Interactive AI avatar with Simli video rendering and ElevenLabs TTS. Give your agent a face that speaks!
+emoji: "🧑‍💻"
 homepage: https://github.com/Johannes-Berggren/openclaw-avatar
 metadata:
-  clawdis:
+  openclaw:
     skillKey: avatar
     os: [macos, linux, windows]
     requires:
@@ -16,6 +16,10 @@ metadata:
       requiredEnv:
         - SIMLI_API_KEY
         - ELEVENLABS_API_KEY
+      optionalEnv:
+        - ELEVENLABS_VOICE_ID
+        - SLACK_BOT_TOKEN
+        - OPENCLAW_TOKEN
       example: |
         SIMLI_API_KEY=your-simli-api-key
         ELEVENLABS_API_KEY=your-elevenlabs-api-key
@@ -30,80 +34,132 @@ metadata:
 
 # Avatar Skill
 
-Interactive AI avatar interface for OpenClaw with real-time lip-synced video and text-to-speech.
+Give your OpenClaw agent a face! Real-time lip-synced video avatar with text-to-speech.
 
-## Features
+## What It Does
 
-- **Voice Responses**: Speaks conversational summaries using ElevenLabs TTS
-- **Visual Avatar**: Realistic lip-synced video via Simli
-- **Detail Panel**: Shows formatted markdown alongside spoken responses
-- **Multi-language**: Supports multiple languages for speech and TTS
-- **Slack/Email**: Forward responses to Slack DMs or email (when configured)
-- **Stream Deck**: Optional hardware control with Elgato Stream Deck
+- **Speaks your responses** — Agent replies are converted to speech via ElevenLabs
+- **Animated avatar** — Realistic lip-synced video via Simli
+- **Detail panel** — Shows formatted text alongside spoken audio
+- **Multi-language** — Supports different languages for speech and TTS
 
-## Setup
+## Quick Setup
 
-1. Get API keys:
-   - [Simli](https://simli.com) - Avatar rendering
-   - [ElevenLabs](https://elevenlabs.io) - Text-to-speech
+### 1. Get API Keys (5 minutes)
 
-2. Set environment variables:
-   ```bash
-   export SIMLI_API_KEY=your-key
-   export ELEVENLABS_API_KEY=your-key
-   ```
+| Service | Get Key | Free Tier |
+|---------|---------|-----------|
+| [Simli](https://simli.com) | Dashboard → API Keys | ✅ Limited minutes |
+| [ElevenLabs](https://elevenlabs.io) | Profile → API Keys | ✅ 10k chars/month |
 
-3. Start the avatar:
-   ```bash
-   openclaw-avatar
-   ```
+### 2. Get a Simli Face ID
 
-4. Open http://localhost:5173
+1. Go to [Simli Dashboard](https://simli.com/dashboard) → **Faces**
+2. Click any stock face (or create your own)
+3. Copy the **Face ID** (looks like: `5514e24d-6086-46a3-ace4-6a7264e5cb7c`)
+
+### 3. Set Environment Variables
+
+```bash
+export SIMLI_API_KEY="your-simli-api-key"
+export ELEVENLABS_API_KEY="your-elevenlabs-api-key"
+```
+
+### 4. Create Config File
+
+Create `avatar.config.json` in your working directory:
+
+```json
+{
+  "avatars": [
+    {
+      "id": "default",
+      "name": "Assistant",
+      "faceId": "YOUR-SIMLI-FACE-ID",
+      "voiceId": "21m00Tcm4TlvDq8ikWAM",
+      "default": true
+    }
+  ]
+}
+```
+
+### 5. Start
+
+```bash
+openclaw-avatar
+# Open http://localhost:5173
+```
 
 ## Response Format
 
-When responding to avatar queries, use this format:
+When responding via avatar, structure your replies like this:
 
 ```
 <spoken>
-A short conversational summary (1-3 sentences). NO markdown, NO formatting. Plain speech only.
+Brief conversational summary. This is read aloud.
+No markdown, no formatting — just natural speech.
 </spoken>
 <detail>
-Full detailed response with markdown formatting (bullet points, headers, bold, etc).
+## Full Details Here
+
+- Bullet points work great
+- **Bold** and *italic* supported
+- Code blocks, tables, etc.
 </detail>
 ```
 
 ### Guidelines
 
-1. **spoken**: Brief, natural, conversational. This is read aloud.
-2. **detail**: Comprehensive information with proper markdown.
-3. Always include both sections.
+| Section | Purpose | Style |
+|---------|---------|-------|
+| `<spoken>` | Read aloud by avatar | Conversational, 1-3 sentences, NO markdown |
+| `<detail>` | Displayed in side panel | Full markdown formatting |
 
-## Example
+### Example
 
-User: "What meetings do I have today?"
+**User asks**: "What's on my calendar today?"
 
 ```
 <spoken>
-You have three meetings today. Your first one is a team standup at 9 AM, then a product review at 2 PM, and finally a 1-on-1 with Sarah at 4 PM.
+You have three meetings today. A team standup at 9, product review at 2, and a one-on-one with Sarah at 4.
 </spoken>
 <detail>
-## Today's Meetings
+## Today's Schedule
 
-### 9:00 AM - Team Standup
-- **Duration**: 15 minutes
-- **Attendees**: Engineering team
+### 9:00 AM — Team Standup
+- **Duration**: 15 min
+- Engineering team sync
 
-### 2:00 PM - Product Review
+### 2:00 PM — Product Review
 - **Duration**: 1 hour
-- **Attendees**: Product, Design, Engineering leads
+- Q1 roadmap discussion
 
-### 4:00 PM - 1:1 with Sarah
-- **Duration**: 30 minutes
-- **Notes**: Follow up on project timeline
+### 4:00 PM — 1:1 with Sarah
+- **Duration**: 30 min
+- Project timeline follow-up
 </detail>
 ```
 
 ## Session Key
 
-Avatar responses use session key: `agent:main:avatar`
+Avatar sessions use: `agent:main:avatar`
+
+## Voice Options
+
+The default voice is ElevenLabs' "Rachel" (`21m00Tcm4TlvDq8ikWAM`).
+
+Find more voices at [elevenlabs.io/voices](https://elevenlabs.io/voices):
+- Copy the Voice ID from any voice's page
+- Update `voiceId` in your config
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| No video | Check `SIMLI_API_KEY` and `faceId` are correct |
+| No audio | Check `ELEVENLABS_API_KEY` is correct |
+| Can't connect to OpenClaw | Verify gateway is running (`openclaw status`) |
+
+## More Info
+
+See full documentation: [github.com/Johannes-Berggren/openclaw-avatar](https://github.com/Johannes-Berggren/openclaw-avatar)

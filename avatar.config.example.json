@@ -10,7 +10,7 @@
     {
       "id": "default",
       "name": "Assistant",
-      "faceId": "your-simli-face-id",
+      "faceId": "tmp_s2s_69c11995-e5d2-4f1b-96db-9e79bc96c0df",
       "voiceId": "21m00Tcm4TlvDq8ikWAM",
       "default": true
     }
@@ -26,6 +26,21 @@
       "code": "nb-NO",
       "name": "Norsk",
       "flag": "no"
+    },
+    {
+      "code": "es-ES",
+      "name": "Español",
+      "flag": "es"
+    },
+    {
+      "code": "de-DE",
+      "name": "Deutsch",
+      "flag": "de"
+    },
+    {
+      "code": "fr-FR",
+      "name": "Français",
+      "flag": "fr"
     }
   ],
   "integrations": {
