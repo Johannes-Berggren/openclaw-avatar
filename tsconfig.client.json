@@ -6,9 +6,20 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"]
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client",
+      "dom-speech-recognition"
+    ]
   },
-  "include": ["src/client/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/client/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

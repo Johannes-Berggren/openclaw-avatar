@@ -73,7 +73,6 @@ export function loadConfig(configPath?: string): Config {
 
   // Build secrets from environment variables
   const secrets = {
-    simliApiKey: process.env.SIMLI_API_KEY || '',
     elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
     elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
     slackBotToken: process.env.SLACK_BOT_TOKEN,
@@ -118,7 +117,6 @@ export function getClientConfig(config: Config): ClientConfig {
     avatars: config.avatars,
     languages: config.languages,
     fillers: config.fillers,
-    simliApiKey: config.secrets.simliApiKey,
   };
 }
 

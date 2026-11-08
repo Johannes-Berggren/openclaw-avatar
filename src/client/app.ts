@@ -1,3 +1,4 @@
+export {};
 /**
  * OpenClaw Avatar - Client Application
  *
@@ -5,7 +6,7 @@
  * and user interaction.
  */
 
-import { SimliClient } from 'simli-client';
+
 
 // Types
 interface ClientConfig {
@@ -33,7 +34,6 @@ interface ClientConfig {
       [category: string]: string[];
     };
   };
-  simliApiKey: string;
 }
 
 interface ChatResponse {
@@ -57,8 +57,8 @@ const statusEl = document.getElementById('status') as HTMLElement;
 const statusDot = document.getElementById('statusDot') as HTMLElement;
 const msgEl = document.getElementById('msg') as HTMLInputElement;
 const sendBtn = document.getElementById('send') as HTMLButtonElement;
-const videoEl = document.getElementById('simli-video') as HTMLVideoElement;
-const audioEl = document.getElementById('simli-audio') as HTMLAudioElement;
+const videoEl = document.getElementById('avatar-placeholder') as HTMLElement;
+
 const spokenTextEl = document.getElementById('spoken-text') as HTMLElement;
 const detailContentEl = document.getElementById('detail-content') as HTMLElement;
 const thinkingOverlay = document.getElementById('thinking-overlay') as HTMLElement;
@@ -70,7 +70,17 @@ const avatarOptions = document.getElementById('avatar-options') as HTMLElement;
 const appNameEl = document.getElementById('app-name') as HTMLElement;
 
 // State
-let simli: SimliClient | null = null;
+let audioContext: AudioContext | null = null;
+let nextAudioTime = 0;
+const audioSources = new Set<AudioBufferSourceNode>();
+function getAudioContext(): AudioContext {
+  return audioContext ??= new AudioContext();
+}
+function stopAudio(): void {
+  for (const source of audioSources) source.stop();
+  audioSources.clear();
+  nextAudioTime = 0;
+}
 let audioUnlocked = false;
 let clientConfig: ClientConfig | null = null;
 let currentFaceId: string = '';
@@ -116,40 +126,13 @@ async function askAvatar(message: string): Promise<ChatResponse> {
 async function unlockAudio(): Promise<void> {
   if (audioUnlocked) return;
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
     await ctx.resume();
-    ctx.close();
-    audioEl.muted = false;
-    await audioEl.play().catch(() => {});
+
     audioUnlocked = true;
   } catch {
     // Ignore
   }
-}
-
-// --- Simli ---
-
-async function initSimli(): Promise<void> {
-  if (!clientConfig) throw new Error('Config not loaded');
-
-  simli = new SimliClient();
-
-  simli.Initialize({
-    apiKey: clientConfig.simliApiKey,
-    faceID: currentFaceId,
-    handleSilence: true,
-    maxSessionLength: 3600,
-    maxIdleTime: 600,
-    videoRef: videoEl,
-    audioRef: audioEl,
-    enableConsoleLogs: false,
-  });
-
-  simli.on('connected', () => console.log('Simli connected'));
-
-  setStatus('Starting...', 'thinking');
-  await simli.start();
-  setStatus('Ready', 'ready');
 }
 
 // --- TTS ---
@@ -168,12 +151,22 @@ async function fetchTTSAudio(text: string): Promise<Uint8Array> {
   return new Uint8Array(await res.arrayBuffer());
 }
 
-function sendAudioToSimli(pcm16Data: Uint8Array): void {
-  if (!simli) return;
-  const CHUNK = 4096;
-  for (let i = 0; i < pcm16Data.length; i += CHUNK) {
-    simli.sendAudioData(pcm16Data.slice(i, i + CHUNK));
-  }
+function playAudio(pcm16Data: Uint8Array): void {
+  const ctx = getAudioContext();
+  const samples = Math.floor(pcm16Data.byteLength / 2);
+  if (!samples) return;
+  const buffer = ctx.createBuffer(1, samples, 16000);
+  const channel = buffer.getChannelData(0);
+  const view = new DataView(pcm16Data.buffer, pcm16Data.byteOffset, pcm16Data.byteLength);
+  for (let i = 0; i < samples; i++) channel[i] = view.getInt16(i * 2, true) / 32768;
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.onended = () => audioSources.delete(source);
+  audioSources.add(source);
+  const start = Math.max(ctx.currentTime, nextAudioTime);
+  source.start(start);
+  nextAudioTime = start + buffer.duration;
 }
 
 // --- Fillers ---
@@ -223,7 +216,7 @@ async function handleSend(): Promise<void> {
 
     const fillerPromise = fetchTTSAudio(filler)
       .then((pcm) => {
-        sendAudioToSimli(pcm);
+        playAudio(pcm);
         return (pcm.length / 2 / 16000) * 1000;
       })
       .catch((e) => {
@@ -252,7 +245,7 @@ async function handleSend(): Promise<void> {
     const spokenText = spoken || 'Here you go.';
     setStatus('Speaking...', 'speaking');
     const pcmData = await fetchTTSAudio(spokenText);
-    sendAudioToSimli(pcmData);
+    playAudio(pcmData);
 
     const durationMs = (pcmData.length / 2 / 16000) * 1000;
     setTimeout(() => {
@@ -341,7 +334,7 @@ function initStreamDeckEvents(): void {
     }
 
     if (data.action === 'interrupt') {
-      if (simli) simli.ClearBuffer();
+      stopAudio();
       setStatus('Ready', 'ready');
       fetch('/api/speaking-done', { method: 'POST' }).catch(() => {});
     }
@@ -351,7 +344,7 @@ function initStreamDeckEvents(): void {
         try {
           setStatus('Speaking...', 'speaking');
           const pcm = await fetchTTSAudio(data.text);
-          sendAudioToSimli(pcm);
+          playAudio(pcm);
           setTimeout(() => {
             setStatus('Ready', 'ready');
             fetch('/api/speaking-done', { method: 'POST' }).catch(() => {});
@@ -364,11 +357,11 @@ function initStreamDeckEvents(): void {
     }
 
     if (data.action === 'mute') {
-      audioEl.muted = true;
+      void getAudioContext().suspend();
     }
 
     if (data.action === 'unmute') {
-      audioEl.muted = false;
+      void getAudioContext().resume();
     }
   };
 
@@ -577,16 +570,9 @@ avatarOptions.addEventListener('click', async (e) => {
 
   settingsPage.classList.remove('active');
 
-  setStatus('Switching avatar...', 'thinking');
-  try {
-    if (simli) simli.close();
-  } catch (e) {
-    console.warn('Simli close error:', e);
-  }
-
   currentFaceId = faceId;
   currentVoiceId = voiceId || currentVoiceId;
-  await initSimli();
+  setStatus('Ready', 'ready');
 });
 
 // --- Boot ---
@@ -631,8 +617,7 @@ async function boot(): Promise<void> {
     // Start SSE for Stream Deck events
     initStreamDeckEvents();
 
-    // Initialize Simli
-    await initSimli();
+    setStatus('Ready', 'ready');
   } catch (err) {
     console.error('Boot error:', err);
     setStatus(`Error: ${(err as Error).message}`, 'ready');

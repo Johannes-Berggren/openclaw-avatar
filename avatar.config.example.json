@@ -10,7 +10,7 @@
     {
       "id": "default",
       "name": "Assistant",
-      "faceId": "tmp_s2s_69c11995-e5d2-4f1b-96db-9e79bc96c0df",
+      "faceId": "default",
       "voiceId": "21m00Tcm4TlvDq8ikWAM",
       "default": true
     }
@@ -29,7 +29,7 @@
     },
     {
       "code": "es-ES",
-      "name": "Español",
+      "name": "Espa\u00f1ol",
       "flag": "es"
     },
     {
@@ -39,7 +39,7 @@
     },
     {
       "code": "fr-FR",
-      "name": "Français",
+      "name": "Fran\u00e7ais",
       "flag": "fr"
     }
   ],

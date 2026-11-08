@@ -21,7 +21,6 @@
     "openclaw",
     "avatar",
     "ai",
-    "simli",
     "elevenlabs",
     "tts",
     "voice"
@@ -39,7 +38,6 @@
   "dependencies": {
     "dotenv": "^16.4.0",
     "express": "^5.2.1",
-    "simli-client": "latest",
     "ws": "^8.19.0"
   },
   "optionalDependencies": {
@@ -47,6 +45,7 @@
     "canvas": "^3.2.1"
   },
   "devDependencies": {
+    "@types/dom-speech-recognition": "^0.0.12",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.0",
