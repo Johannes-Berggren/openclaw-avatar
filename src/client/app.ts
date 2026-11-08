@@ -17,7 +17,7 @@ interface ClientConfig {
   avatars: Array<{
     id: string;
     name: string;
-    faceId: string;
+    faceId?: string;
     voiceId: string;
     default?: boolean;
     zoom?: number;
@@ -72,9 +72,15 @@ const appNameEl = document.getElementById('app-name') as HTMLElement;
 // State
 let audioContext: AudioContext | null = null;
 let nextAudioTime = 0;
+let audioOutput: GainNode | null = null;
 const audioSources = new Set<AudioBufferSourceNode>();
 function getAudioContext(): AudioContext {
-  return audioContext ??= new AudioContext();
+  if (!audioContext) {
+    audioContext = new AudioContext();
+    audioOutput = audioContext.createGain();
+    audioOutput.connect(audioContext.destination);
+  }
+  return audioContext;
 }
 function stopAudio(): void {
   for (const source of audioSources) source.stop();
@@ -161,7 +167,7 @@ function playAudio(pcm16Data: Uint8Array): void {
   for (let i = 0; i < samples; i++) channel[i] = view.getInt16(i * 2, true) / 32768;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
-  source.connect(ctx.destination);
+  source.connect(audioOutput!);
   source.onended = () => audioSources.delete(source);
   audioSources.add(source);
   const start = Math.max(ctx.currentTime, nextAudioTime);
@@ -357,11 +363,13 @@ function initStreamDeckEvents(): void {
     }
 
     if (data.action === 'mute') {
-      void getAudioContext().suspend();
+      getAudioContext();
+      audioOutput!.gain.value = 0;
     }
 
     if (data.action === 'unmute') {
-      void getAudioContext().resume();
+      getAudioContext();
+      audioOutput!.gain.value = 1;
     }
   };
 
@@ -496,12 +504,12 @@ function renderAvatarOptions(): void {
   for (const avatar of clientConfig.avatars) {
     const btn = document.createElement('button');
     btn.className = 'avatar-option';
-    btn.dataset.faceId = avatar.faceId;
+    btn.dataset.faceId = avatar.faceId || avatar.id;
     btn.dataset.voiceId = avatar.voiceId;
     if (avatar.zoom) btn.dataset.zoom = String(avatar.zoom);
     if (avatar.top) btn.dataset.top = String(avatar.top);
 
-    if (avatar.faceId === currentFaceId) {
+    if ((avatar.faceId || avatar.id) === currentFaceId) {
       btn.classList.add('active');
     }
 
@@ -598,12 +606,12 @@ async function boot(): Promise<void> {
     const savedVoiceId = localStorage.getItem('avatar-voiceId');
     const defaultAvatar = clientConfig.avatars.find((a) => a.default) || clientConfig.avatars[0];
 
-    currentFaceId = savedFaceId || defaultAvatar?.faceId || '';
+    currentFaceId = savedFaceId || defaultAvatar?.faceId || defaultAvatar?.id || '';
     currentVoiceId = savedVoiceId || defaultAvatar?.voiceId || '';
 
     // Apply saved zoom/position
     if (savedFaceId) {
-      const avatar = clientConfig.avatars.find((a) => a.faceId === savedFaceId);
+      const avatar = clientConfig.avatars.find((a) => (a.faceId || a.id) === savedFaceId);
       if (avatar) {
         videoEl.style.height = (avatar.zoom || 120) + '%';
         videoEl.style.top = (avatar.top || -10) + '%';

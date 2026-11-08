@@ -1,6 +1,6 @@
 ---
 name: avatar
-description: Interactive AI avatar with local audio playback and ElevenLabs TTS. Give your agent a face that speaks!
+description: Interactive AI avatar with local audio playback and ElevenLabs TTS. Voice-and-text frontend.
 emoji: "🧑‍💻"
 homepage: https://github.com/Johannes-Berggren/openclaw-avatar
 metadata:
@@ -31,7 +31,7 @@ metadata:
 
 # Avatar Skill
 
-Give your OpenClaw agent a face! Real-time lip-synced video avatar with text-to-speech.
+Voice-and-text frontend with local browser audio playback.
 
 ## What It Does
 
@@ -48,16 +48,13 @@ Give your OpenClaw agent a face! Real-time lip-synced video avatar with text-to-
 | [ElevenLabs](https://elevenlabs.io) | Profile → API Keys | ✅ 10k chars/month |
 
 
-2. Click any stock face (or create your own)
-3. Copy the **Face ID** (looks like: `5514e24d-6086-46a3-ace4-6a7264e5cb7c`)
-
-### 3. Set Environment Variables
+### 2. Set Environment Variables
 
 ```bash
 export ELEVENLABS_API_KEY="your-elevenlabs-api-key"
 ```
 
-### 4. Create Config File
+### 3. Create Config File
 
 Create `avatar.config.json` in your working directory:
 
@@ -74,7 +71,7 @@ Create `avatar.config.json` in your working directory:
 }
 ```
 
-### 5. Start
+### 4. Start
 
 ```bash
 openclaw-avatar

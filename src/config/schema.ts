@@ -5,7 +5,7 @@
 export interface AvatarConfig {
   id: string;
   name: string;
-  faceId: string;
+  faceId?: string;
   voiceId: string;
   default?: boolean;
   zoom?: number;
