@@ -44,7 +44,7 @@ For more information, see: https://github.com/openclaw/avatar
     console.error('Configuration error:', (err as Error).message);
     console.error('\nMake sure you have:');
     console.error('  1. Copied .env.example to .env');
-    console.error('  2. Added your SIMLI_API_KEY and ELEVENLABS_API_KEY');
+    console.error('  2. Added your ELEVENLABS_API_KEY');
     process.exit(1);
   }
 

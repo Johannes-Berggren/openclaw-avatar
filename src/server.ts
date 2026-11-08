@@ -307,7 +307,7 @@ async function main(): Promise<void> {
     }
   });
 
-  // Client config endpoint - safe to expose (no secrets except simli key)
+  // Client config endpoint - safe to expose (no secrets)
   app.get('/api/client-config', (_req: Request, res: Response) => {
     const clientConfig: ClientConfig = getClientConfig(config);
     res.json(clientConfig);

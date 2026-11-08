@@ -5,7 +5,7 @@
 export interface AvatarConfig {
   id: string;
   name: string;
-  faceId: string;
+  faceId?: string;
   voiceId: string;
   default?: boolean;
   zoom?: number;
@@ -75,7 +75,6 @@ export interface OpenClawConfig {
 }
 
 export interface SecretsConfig {
-  simliApiKey: string;
   elevenLabsApiKey: string;
   elevenLabsVoiceId?: string;
   slackBotToken?: string;
@@ -97,7 +96,6 @@ export interface ClientConfig {
   avatars: AvatarConfig[];
   languages: LanguageConfig[];
   fillers: FillerConfig;
-  simliApiKey: string;
 }
 
 /**
@@ -107,9 +105,6 @@ export function validateConfig(config: Config): void {
   const errors: string[] = [];
 
   // Required secrets
-  if (!config.secrets.simliApiKey) {
-    errors.push('SIMLI_API_KEY environment variable is required');
-  }
   if (!config.secrets.elevenLabsApiKey) {
     errors.push('ELEVENLABS_API_KEY environment variable is required');
   }
@@ -128,7 +123,6 @@ export function validateConfig(config: Config): void {
   config.avatars?.forEach((avatar, i) => {
     if (!avatar.id) errors.push(`Avatar ${i}: id is required`);
     if (!avatar.name) errors.push(`Avatar ${i}: name is required`);
-    if (!avatar.faceId) errors.push(`Avatar ${i}: faceId is required`);
     if (!avatar.voiceId) errors.push(`Avatar ${i}: voiceId is required`);
   });
 
